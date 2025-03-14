@@ -93,7 +93,7 @@ RAILS_ENV=production bin/rails runner rename_ns.rb
 After this, remove `REDIS_NAMESPACE` from your `.env.production`
 configuration file and restart your Mastodon services.
 
-### Move redis Keys To Different redis Database
+### Case 2: Move redis Keys To Different redis Database
 
 If you really can only use a single instance of redis but still need to
 share this with other applications, using a separate redis database
@@ -121,7 +121,7 @@ configuration and use `REDIS_URL` to point to the other database, e.g.
 > a single redis instance with different apps using pub/sub and you
 > should never share it between different instances of Mastodon.
 
-### Move redis Keys To A Dedicated redis Instance
+### Case 3: Move redis Keys To A Dedicated redis Instance
 
 Redis makes it relatively easy to start different instances even on the
 same server. Just use a different port for each instance and you should
