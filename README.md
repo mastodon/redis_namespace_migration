@@ -80,14 +80,14 @@ need this. This would apply if
   migration.
 
 In this case you only need to rename the keys in redis. An example
-script to do so is [rename\_ns.rb](rename_ns.rb) in this repository.
+script to do so is [rename\_ns.rb](remove_ns.rb) in this repository.
 
 You can copy it into your Mastodon code directory (e.g.
 `/home/mastodon/live`), make sure your Mastodon services are stopped and
 run it like this:
 
 ```sh
-RAILS_ENV=production bin/rails runner rename_ns.rb
+RAILS_ENV=production bin/rails runner remove_ns.rb
 ```
 
 After this, remove `REDIS_NAMESPACE` from your `.env.production`
