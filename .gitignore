@@ -1,3 +1,4 @@
-/postgres14
-/public
-/redis
+/test/new_redis
+/test/postgres14
+/test/public
+/test/redis

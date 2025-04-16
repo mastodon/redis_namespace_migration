@@ -1,5 +1,4 @@
 include Redisable
-redis.flushall
 
 2.times do
   RemovalWorker.perform_async(12345)

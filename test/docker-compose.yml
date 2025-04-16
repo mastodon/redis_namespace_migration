@@ -25,6 +25,16 @@ services:
     volumes:
       - ./redis:/data
 
+  new_redis:
+    restart: always
+    image: redis:7-alpine
+    networks:
+      - internal_network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+    volumes:
+      - ./new_redis:/data
+
   # es:
   #   restart: always
   #   image: docker.elastic.co/elasticsearch/elasticsearch:7.17.4

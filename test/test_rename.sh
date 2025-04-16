@@ -28,6 +28,10 @@ cp .env.namespace .env.production
 # Start postgresql and redis
 docker compose up -d db redis
 
+# Empty redis DBs in case contents are left over from
+# a previous run
+docker compose exec redis redis-cli flushall
+
 # Setup the database - this will fail if it already exists
 # but that is fine
 docker compose run --rm web bundle exec rails db:setup
@@ -57,7 +61,7 @@ rails_runner check_cache_and_app_redis.rb
 check_failure "Checking cache and/or app keys before key migration failed"
 
 # Migrate keys by removing the namespace
-rails_runner remove_ns.rb
+rails_runner ../rename.rb
 
 # Use a config _without_ namespaces
 cp .env.no_namespace .env.production

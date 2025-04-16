@@ -1,12 +1,13 @@
-# Taken almost verbatim from https://www.mikeperham.com/2017/04/10/migrating-from-redis-namespace/
+# Based on code from https://www.mikeperham.com/2017/04/10/migrating-from-redis-namespace/
 
-base_ns = ENV.fetch("REDIS_NAMESPACE")
+redis_config = Mastodon::RedisConfiguration.new
+
+base_ns = redis_config.base[:namespace]
 prefix = "#{base_ns}:*"
 cache_prefix = "#{base_ns}_cache:*"
 
-################################
-# Point to your Redis instance
-redis = Redis.new(host: "redis", db: 0)
+redis_url = redis_config.base[:url]
+redis = Redis.new(url: redis_url)
 
 script = <<-LUA
   local count = 0
