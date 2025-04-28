@@ -111,8 +111,17 @@ run it like this:
 RAILS_ENV=production bin/rails runner rename.rb
 ```
 
-After this, remove `REDIS_NAMESPACE` from your `.env.production`
-configuration file and restart your Mastodon services.
+After this, edit your `.env.production` and depending on your current
+setup either:
+
+1. Rename `REDIS_NAMESPACE` to `ES_PREFIX` if (and only if) you are
+   using ElasticSearch and did not have `ES_PREFIX` configured. (In
+   this case `REDIS_NAMESPACE` was used as the default for prefixes
+   in ElasticSearch.) OR
+2. Remove `REDIS_NAMESPACE` altogether if not using ElasticSearch *or*
+   if you already have a `ES_PREFIX` variable set.
+
+Save your configuration and restart all Mastodon services.
 
 ### Case 2: Move Redis Keys To A Dedicated Redis Instance
 
@@ -148,9 +157,16 @@ your new, dedicated Redis instance. Also make sure your old Redis
 instance can actually reach this URL.
 
 After this, update your `env.production` file to point to the new,
-dedicated Redis instance and make sure to remove `REDIS_NAMESPACE`.
-Then restart your Mastodon services.
+dedicated Redis instance and depending on your current setup, either:
 
+1. Rename `REDIS_NAMESPACE` to `ES_PREFIX` if (and only if) you are
+   using ElasticSearch and did not have `ES_PREFIX` configured. (In
+   this case `REDIS_NAMESPACE` was used as the default for prefixes
+   in ElasticSearch.) OR
+2. Remove `REDIS_NAMESPACE` altogether if not using ElasticSearch *or*
+   if you already have a `ES_PREFIX` variable set.
+
+Save your configuration and restart all Mastodon services.
 
 ## Why Not Redis Databases?
 
