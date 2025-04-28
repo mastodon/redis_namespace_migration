@@ -31,14 +31,35 @@ While we know this is very unfortunate for server admins that use this
 option, given the reasons above we do not think we have a choice other
 than to remove it from Mastodon.
 
-Sadly, a fully automated migration for affected server administrators
-does not seem to be possible. And we struggle to find a "one size fits
-all" solution, mainly because we never used this option ourselves and do
-not know how and why exactly it is used by others.
+Sadly, a fully automated migration as part of a Mastodon update is not
+possible. This is mainly due to different scenarios needing different
+approaches.
+
+After having discussed this with some server administrators, we have
+identified two main scenarios:
+
+1. Dedicated Redis instances that use namespaces, even though they do
+   not strictly need to. Sometimes this in an artifact of a formerly
+   shared installation, or just because it was there as an option. In
+   this case it is sufficient to just strip the namespace from all the
+   keys in Redis.
+2. A shared Redis instance used by more than one Mastodon installation.
+   In this case we recommend to use a dedicated Redis instance per
+   Mastodon installation, which means you will need to move keys to
+   another Redis instance and then rename them.
+
+> [!NOTE]
+> If you have read the article linked above you might wonder about
+> another option: Instead of having dedicated Redis instances, one could
+> also consider using Redis' built-in mechanism for data separation,
+> databases. Please see below for an explanation why we do not currently
+> consider this to be a viable option.
 
 This document is meant to help server administrators to perform a
-migration in a half-automated way and to collect feedback on the process
-and on scenarios that we may not have considered.
+migration in one of the two scenarios mentioned above. It should also
+give you an idea what to do if your setup does not match one of those
+perfectly. But feel free to reach out if you need help and/or think this
+document is missing something.
 
 > [!CAUTION]
 > This document is a work in progress. *DO NOT* use anything mentioned
@@ -46,7 +67,7 @@ and on scenarios that we may not have considered.
 > production environment on a separate test machine or cluster and want
 > to try it out there, we would love to hear your feedback.
 
-## Migration approaches
+## Performing Migrations
 
 If you use a `REDIS_NAMESPACE` you cannot migrate away from that without
 some downtime. The exact downtime depends on the number of keys you have
@@ -65,7 +86,7 @@ The process is always roughly the same:
 
 The difference lies in where to migrate redis keys to.
 
-### Case 1: Keep redis Database, Only Remove Namespace
+### Case 1: Keep Redis Database, Only Remove Namespace
 
 Redis namespaces were introduced to share a single redis database with
 other applications. In the most simple case, you do not (or no longer)
@@ -80,48 +101,20 @@ need this. This would apply if
   migration.
 
 In this case you only need to rename the keys in redis. An example
-script to do so is [rename\_ns.rb](remove_ns.rb) in this repository.
+script to do so is [rename.rb](rename.rb) in this repository.
 
 You can copy it into your Mastodon code directory (e.g.
 `/home/mastodon/live`), make sure your Mastodon services are stopped and
 run it like this:
 
 ```sh
-RAILS_ENV=production bin/rails runner remove_ns.rb
+RAILS_ENV=production bin/rails runner rename.rb
 ```
 
 After this, remove `REDIS_NAMESPACE` from your `.env.production`
 configuration file and restart your Mastodon services.
 
-### Case 2: Move redis Keys To Different redis Database
-
-If you really can only use a single instance of redis but still need to
-share this with other applications, using a separate redis database
-could be an option. By default, redis has 16 different databases
-(numbered 0-15) that each have a totally separate key space.
-
-To migrate keys in this scenario you would need to amend the script from
-this repository and move the key to the other database before renaming
-it. This can be achieved with the [`MOVE`
-command](https://redis.io/docs/latest/commands/move/).
-
-When this is finished you need to edit your `.env.production`
-configuration and use `REDIS_URL` to point to the other database, e.g.
-`REDIS_URL=redis://localhost:6379/4` to use the database numbered `4`.
-
-> [!WARNING]
-> redis does not recommend using databases to share one instance between
-> different apps. This is probably the least robust option and should be
-> avoided if at all possible.
-
-> [!CAUTION]
-> There is one huge caveat with this solution: While databases have a
-> separate keyspace, the names of channels for pub/sub in redis always
-> share one global namespace. This means you might not be able to share
-> a single redis instance with different apps using pub/sub and you
-> should never share it between different instances of Mastodon.
-
-### Case 3: Move redis Keys To A Dedicated redis Instance
+### Case 2: Move Redis Keys To A Dedicated Redis Instance
 
 Redis makes it relatively easy to start different instances even on the
 same server. Just use a different port for each instance and you should
@@ -129,34 +122,62 @@ be good. The memory overhead for running another instance of redis is
 very small.
 
 So if you currently share a single redis instance between different
-apps, spinning up a separate, dedicated instance for Mastodon might be a
-good solution.
+installations of Mastodon, spinning up a separate, dedicated instance for
+each Mastodon installation is a good solution.
 
 > [!TIP]
 > While you are at it you should also consider running a separate redis
 > instance just for cache, a setup we recommend for every instance that
 > has more than a handful of users. Of course you should only attempt
-> this after having migrated key names successfully.
+> this after having migrated keys successfully.
 
-Just like with the last scenario the migration in this case would
-require some changes to the script above. Instead of renaming keys, you
-should first move the keys to the new redis instance. This can be
-achieved with the
-[`MIGRATE` command](https://redis.io/docs/latest/commands/migrate/).
-This will probably take a long time.
+In this case you need to move keys from one Redis instance to another,
+then rename them. An example script to do so is [move.rb](move.rb) in
+this repository.
 
-When this is finished you should use the unmodified script to rename the
-keys.
+You can copy it into your Mastodon code directory (e.g.
+`/home/mastodon/live`), make sure your Mastodon services are stopped and
+run it like this:
 
-## Namespaces And Multiple redis Instances
+```sh
+NEW_REDIS_URL=<Redis URL> RAILS_ENV=production bin/rails runner move.rb
+```
 
-The approaches outlined above all expect that you run a single instance of
-redis. Mastodon allows (and recommends) to use separate redis instances
-for different use-cases. At least the cache redis should be separate
-from the app and sidekiq redis.
+Make sure to set `NEW_REDIS_URL` to an Redis connection URL pointing to
+your new, dedicated Redis instance. Also make sure your old Redis
+instance can actually reach this URL.
 
-We do not expect anyone to use separate redis instances *and*
-namespaces, but if you do please let us know.
+After this, update your `env.production` file to point to the new,
+dedicated Redis instance and make sure to remove `REDIS_NAMESPACE`.
+Then restart your Mastodon services.
 
-The migration process is not much different, except that will have to
-run the migration script once against each redis instance.
+
+## Why Not Redis Databases?
+
+Redis databases are a built-in way to isolate different key namespaces
+from each other. It is one of the options mentioned in the Sidekiq
+article linked to above.
+
+While this looks good as a way to share a single Redis instance between
+different Mastodon installations on the surface, there are a couple of
+problems with it.
+
+The most obvious one is that while databases offer real isolation of key
+namespaces, channels used for Publish/Subscribe still share a single,
+global namespace. Mastodon uses Publish/Subscribe for its streaming
+server, so databases will not work here.
+
+We thought about providing different workarounds for this, but then were
+made aware of [this comment here by a Redis
+developer](https://github.com/redis/redis/issues/8099#issuecomment-741868975)
+saying that the Redis core team does *not* recommend this setup.
+
+With that in mind we decided to not built a half-baked solution based on
+a mechanism that is not recommended by upstream developers.
+
+Databases may still become an alternative in the future, though: The
+Valkey team is currently contemplating offering full isolation between
+databases, including pub/sub. See [this issue here](https://github.com/valkey-io/valkey/issues/1868)
+for details.
+
+
