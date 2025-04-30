@@ -188,7 +188,7 @@ made aware of [this comment here by a Redis
 developer](https://github.com/redis/redis/issues/8099#issuecomment-741868975)
 saying that the Redis core team does *not* recommend this setup.
 
-With that in mind we decided to not built a half-baked solution based on
+With that in mind we decided to not build a half-baked solution based on
 a mechanism that is not recommended by upstream developers.
 
 Databases may still become an alternative in the future, though: The
