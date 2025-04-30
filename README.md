@@ -29,7 +29,7 @@ development in Mastodon.
 
 While we know this is very unfortunate for server admins that use this
 option, given the reasons above we do not think we have a choice other
-than to remove it from Mastodon.
+than removing support for Redis namespaces from Mastodon.
 
 Sadly, a fully automated migration as part of a Mastodon update is not
 possible. This is mainly due to different scenarios needing different
