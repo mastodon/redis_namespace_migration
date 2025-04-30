@@ -2,20 +2,20 @@
 
 ## Background
 
-Mastodon has supported using a dedicated namespace for keys in redis for
+Mastodon has supported using a dedicated namespace for keys in Redis for
 a long time. The idea was that several applications (or instances of
-Mastodon) could share a single redis database this way.
+Mastodon) could share a single Redis database this way.
 
 We soft-deprecated this option in Mastodon 4.3, mainly because newer
 versions of [sidekiq](https://github.com/mperham/sidekiq) no longer
 support it.
 
 > [!NOTE]
-> `sidekiq`'s author wrote a bit about why he thinks namespaces in redis
+> `sidekiq`'s author wrote a bit about why he thinks namespaces in Redis
 > are a bad idea in his article
 > [Storing Data With Redis](https://www.mikeperham.com/2015/09/24/storing-data-with-redis/)
 > and in his article about
-> [Migrating from redis-namespace](https://www.mikeperham.com/2017/04/10/migrating-from-redis-namespace/).
+> [Migrating from Redis-namespace](https://www.mikeperham.com/2017/04/10/migrating-from-redis-namespace/).
 > We will get back to this article later.
 
 Keeping this option means we cannot update `sidekiq` which
@@ -44,9 +44,9 @@ identified two main scenarios:
    this case it is sufficient to just strip the namespace from all the
    keys in Redis.
 2. A shared Redis instance used by more than one Mastodon installation.
-   In this case we recommend to use a dedicated Redis instance per
-   Mastodon installation, which means you will need to move keys to
-   another Redis instance and then rename them.
+   In this case you will have to use a dedicated Redis instance per
+   Mastodon installation, which means moving keys to another Redis
+   instance and then renaming them.
 
 > [!NOTE]
 > If you have read the article linked above you might wonder about
@@ -71,36 +71,36 @@ document is missing something.
 
 If you use a `REDIS_NAMESPACE` you cannot migrate away from that without
 some downtime. The exact downtime depends on the number of keys you have
-in redis and where you migrate to. We tested a very simple case with
+in Redis and where you migrate to. We tested a very simple case with
 500,000 tiny key/value pairs which took a couple of seconds, but this
 may vary *a lot* on real-world production data, so you should probably
-test this on your infrastructure with a dump of the redis database.
+test this on your infrastructure with a dump of the Redis database.
 
 The process is always roughly the same:
 
 1. Stop *all* Mastodon services (web, sidekiq, streaming).
-2. Migrate redis keys to not use namespaces.
-3. Update Mastodon config (no more namespaces, possibly different redis
+2. Migrate Redis keys to not use namespaces.
+3. Update Mastodon config (no more namespaces, possibly different Redis
    location)
 4. Restart Mastodon services
 
-The difference lies in where to migrate redis keys to.
+The difference lies in where to migrate Redis keys to.
 
 ### Case 1: Keep Redis Database, Only Remove Namespace
 
-Redis namespaces were introduced to share a single redis database with
+Redis namespaces were introduced to share a single Redis database with
 other applications. In the most simple case, you do not (or no longer)
 need this. This would apply if
 
-* You only ever used this redis database for a single Mastodon instance
+* You only ever used this Redis database for a single Mastodon instance
   to begin with, or
-* You used to share the redis database with other software or other
+* You used to share the Redis database with other software or other
   instances of Mastodon, but no longer do so, or
-* You share the redis database with other applications but can migrate
+* You share the Redis database with other applications but can migrate
   those away to use something else before starting the Mastodon
   migration.
 
-In this case you only need to rename the keys in redis. An example
+In this case you only need to rename the keys in Redis. An example
 script to do so is [rename.rb](rename.rb) in this repository.
 
 You can copy it into your Mastodon code directory (e.g.
@@ -127,18 +127,22 @@ Save your configuration and restart all Mastodon services.
 
 Redis makes it relatively easy to start different instances even on the
 same server. Just use a different port for each instance and you should
-be good. The memory overhead for running another instance of redis is
+be good. The memory overhead for running another instance of Redis is
 very small.
 
-So if you currently share a single redis instance between different
+So if you currently share a single Redis instance between different
 installations of Mastodon, spinning up a separate, dedicated instance for
 each Mastodon installation is a good solution.
 
 > [!TIP]
-> While you are at it you should also consider running a separate redis
+> While you are at it you should also consider running a separate Redis
 > instance just for cache, a setup we recommend for every instance that
-> has more than a handful of users. Of course you should only attempt
-> this after having migrated keys successfully.
+> has more than a handful of users. This allows to setup the caching
+> Redis to evict keys, a setting that must never be used for app /
+> sidekiq keys. For more information, please refer to the
+> [official documentation](https://docs.joinmastodon.org/admin/scaling/#redis).
+> Of course you should only attempt this after having migrated keys
+> successfully.
 
 In this case you need to move keys from one Redis instance to another,
 then rename them. An example script to do so is [move.rb](move.rb) in
