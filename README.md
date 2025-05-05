@@ -63,9 +63,11 @@ document is missing something.
 
 > [!CAUTION]
 > This document is a work in progress. *DO NOT* use anything mentioned
-> here on a production system. But if you have a way to recreate your
-> production environment on a separate test machine or cluster and want
-> to try it out there, we would love to hear your feedback.
+> here on a production system without having backups.
+> We recommend running on a test machine or cluster using your
+> production data first, to make sure it works and to get a feeling for
+> the downtime involved.
+> Please reach out to us if you need any assistance.
 
 ## Performing Migrations
 
